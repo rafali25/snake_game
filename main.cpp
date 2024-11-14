@@ -5,163 +5,131 @@
 #include <thread>
 
 using namespace std;
-bool gameOver;
-const int width = 20;
-const int height = 20;
-int x, y, fruitX, fruitY, score;
-int tailX[500], tailY[500];
-int nTail;
-enum eDirecton { STOP = 0, LEFT, RIGHT, UP, DOWN};
-eDirecton dir;
-void Setup()
-{
 
+bool isGameOver;
+const int gridWidth = 20;
+const int gridHeight = 20;
+int headX, headY, fruitPosX, fruitPosY, playerScore;
+int tailPosX[500], tailPosY[500];
+int tailLength;
+enum Direction { STOP = 0, MOVE_LEFT, MOVE_RIGHT, MOVE_UP, MOVE_DOWN };
+Direction currentDirection;
+
+void initializeGame() {
     system("color 6f");
-gameOver = false;
-dir = STOP;
-	x = width / 2;
-	y = height / 2;
-	fruitX = rand() % width;
-	fruitY = rand() % height;
-	score = 0;
-}
-void Draw()
-{
-	system("cls"); //system("clear");
-	for (int i = 0; i < width+2; i++)
-		cout << "-";
-	cout << endl;
-
-	for (int i = 0; i < height;i++)
-	{
-		for (int j = 0; j < width; j++)
-		{
-			if (j == 0)
-				cout << "|";
-			if (i == y && j == x)
-				cout << "O";
-			else if (i == fruitY && j == fruitX)
-				cout << "#";
-			else
-			{
-				bool print = false;
-				for (int k = 0; k < nTail; k++)
-				{
-					if (tailX[k] == j && tailY[k] == i)
-					{
-						cout << "o";
-						print = true;
-					}
-				}
-				if (!print)
-					cout << " ";
-			}
-
-
-			if (j == width - 1)
-				cout << "|";
-		}
-		cout << endl;
-	}
-
-	for (int i = 0; i < width+2; i++)
-		cout << "-";
-	cout << endl;
-	cout << "Score:" << score << endl;
-}
-void Input()
-{
-	if (_kbhit())
-	{
-		switch (_getch())
-		{
-		case 'a':
-			dir = LEFT;
-			break;
-		case 'd':
-			dir = RIGHT;
-			break;
-		case 'w':
-			dir = UP;
-			break;
-		case 's':
-			dir = DOWN;
-			break;
-		case 'x':
-			gameOver = true;
-			break;
-		}
-	}
-}
-void Logic()
-{
-	int prevX = tailX[0];
-	int prevY = tailY[0];
-	int prev2X, prev2Y;
-	tailX[0] = x;
-	tailY[0] = y;
-	for (int i = 1; i < nTail; i++)
-	{
-		prev2X = tailX[i];
-		prev2Y = tailY[i];
-		tailX[i] = prevX;
-		tailY[i] = prevY;
-		prevX = prev2X;
-		prevY = prev2Y;
-	}
-	switch (dir)
-	{
-	case LEFT:
-		x--;
-		break;
-	case RIGHT:
-		x++;
-		break;
-	case UP:
-		y--;
-		break;
-	case DOWN:
-		y++;
-		break;
-	default:
-		break;
-	}
-	//if (x > width || x < 0 || y > height || y < 0)
-	//	gameOver = true;
-	if (x >= width) x = 0; else if (x < 0) x = width - 1;
-	if (y >= height) y = 0; else if (y < 0) y = height - 1;
-
-	for (int i = 0; i < nTail; i++)
-		if (tailX[i] == x && tailY[i] == y)
-			gameOver = true;
-
-	if (x == fruitX && y == fruitY)
-	{
-		score += 10;
-		fruitX = rand() % width;
-		fruitY = rand() % height;
-		nTail++;
-	}
-
-}
-void threaded(){
-PlaySound(TEXT("JOLA.wav"), NULL, SND_SYNC);
+    isGameOver = false;
+    currentDirection = STOP;
+    headX = gridWidth / 2;
+    headY = gridHeight / 2;
+    fruitPosX = rand() % gridWidth;
+    fruitPosY = rand() % gridHeight;
+    playerScore = 0;
 }
 
-int main()
-{
+void drawGrid() {
+    system("cls");
+    for (int i = 0; i < gridWidth + 2; i++)
+        cout << "-";
+    cout << endl;
 
-	Setup();
-	while (!gameOver)
-	{
-		Draw();
-		Input();
-		Logic();
-		thread t1(threaded);
-		t1.detach();
+    for (int i = 0; i < gridHeight; i++) {
+        for (int j = 0; j < gridWidth; j++) {
+            if (j == 0)
+                cout << "|";
+            if (i == headY && j == headX)
+                cout << "O";
+            else if (i == fruitPosY && j == fruitPosX)
+                cout << "#";
+            else {
+                bool printTail = false;
+                for (int k = 0; k < tailLength; k++) {
+                    if (tailPosX[k] == j && tailPosY[k] == i) {
+                        cout << "o";
+                        printTail = true;
+                    }
+                }
+                if (!printTail)
+                    cout << " ";
+            }
+            if (j == gridWidth - 1)
+                cout << "|";
+        }
+        cout << endl;
+    }
 
-		Sleep(80); //sleep(10);
+    for (int i = 0; i < gridWidth + 2; i++)
+        cout << "-";
+    cout << endl;
+    cout << "Score: " << playerScore << endl;
+}
 
-	}
-	return 0;
+void handleInput() {
+    if (_kbhit()) {
+        switch (_getch()) {
+            case 'a': currentDirection = MOVE_LEFT; break;
+            case 'd': currentDirection = MOVE_RIGHT; break;
+            case 'w': currentDirection = MOVE_UP; break;
+            case 's': currentDirection = MOVE_DOWN; break;
+            case 'x': isGameOver = true; break;
+        }
+    }
+}
+
+void gameLogic() {
+    int prevX = tailPosX[0];
+    int prevY = tailPosY[0];
+    int prev2X, prev2Y;
+    tailPosX[0] = headX;
+    tailPosY[0] = headY;
+
+    for (int i = 1; i < tailLength; i++) {
+        prev2X = tailPosX[i];
+        prev2Y = tailPosY[i];
+        tailPosX[i] = prevX;
+        tailPosY[i] = prevY;
+        prevX = prev2X;
+        prevY = prev2Y;
+    }
+
+    switch (currentDirection) {
+        case MOVE_LEFT: headX--; break;
+        case MOVE_RIGHT: headX++; break;
+        case MOVE_UP: headY--; break;
+        case MOVE_DOWN: headY++; break;
+        default: break;
+    }
+
+    if (headX >= gridWidth) headX = 0; else if (headX < 0) headX = gridWidth - 1;
+    if (headY >= gridHeight) headY = 0; else if (headY < 0) headY = gridHeight - 1;
+
+    for (int i = 0; i < tailLength; i++) {
+        if (tailPosX[i] == headX && tailPosY[i] == headY)
+            isGameOver = true;
+    }
+
+    if (headX == fruitPosX && headY == fruitPosY) {
+        playerScore += 10;
+        fruitPosX = rand() % gridWidth;
+        fruitPosY = rand() % gridHeight;
+        tailLength++;
+    }
+}
+
+void playSound() {
+    PlaySound(TEXT("JOLA.wav"), NULL, SND_SYNC);
+}
+
+int main() {
+    initializeGame();
+
+    while (!isGameOver) {
+        drawGrid();
+        handleInput();
+        gameLogic();
+        thread soundThread(playSound);
+        soundThread.detach();
+        Sleep(80);
+    }
+
+    return 0;
 }
